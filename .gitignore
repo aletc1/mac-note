@@ -1,0 +1,23 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+# Swift / SPM
+.build/
+.swiftpm/
+
+# macOS
+.DS_Store
+
+# Object files
+*.o
+*.d
+
+# Editors
+.idea/
+.vscode/
+
+# Temp StoreKit files
+MacNote/Resources/*.storekit
