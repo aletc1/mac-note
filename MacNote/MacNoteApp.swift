@@ -159,7 +159,6 @@ extension Notification.Name {
 struct DetailView: View {
     var appModel: AppModel
     @ObservedObject var editorVMBox: EditorViewModelBox
-    @State private var showCopiedToast = false
 
     var body: some View {
         Group {
@@ -186,67 +185,40 @@ struct DetailView: View {
             }
         }
         .frame(minWidth: 400)
+        .overlay(alignment: .top) {
+            if appModel.isShowingCopyToast {
+                CopyToastView()
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: appModel.isShowingCopyToast)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                copyButton
+                Button {
+                    appModel.copyCurrentNote()
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .help("Copy note")
+                .disabled(!appModel.canCopyCurrentNote)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            copiedToast
-        }
     }
+}
 
-    private var copyButton: some View {
-        Button {
-            copyCurrentNote()
-        } label: {
-            Label("Copy Note", systemImage: "doc.on.doc")
-        }
-        .help("Copy Note")
-        .disabled(!canCopy)
-    }
-
-    private var canCopy: Bool {
-        if appModel.draftBuffer.isActive {
-            return !appModel.draftBuffer.text.isEmpty
-        }
-        return appModel.selectedNoteID != nil
-    }
-
-    @ViewBuilder
-    private var copiedToast: some View {
-        if showCopiedToast {
-            Label("Copied", systemImage: "checkmark.circle.fill")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.regularMaterial, in: Capsule())
-                .padding(.top, 12)
-                .padding(.trailing, 16)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-        }
-    }
-
-    private var copyableContent: String {
-        if appModel.draftBuffer.isActive {
-            return appModel.draftBuffer.text
-        }
-        guard appModel.selectedNoteID != nil else { return "" }
-        return editorVMBox.vm.loadedContent
-    }
-
-    private func copyCurrentNote() {
-        NoteClipboardExporter(notesDirectory: appModel.noteStore.notesDirectory)
-            .copy(markdown: copyableContent)
-        withAnimation(.easeOut(duration: 0.15)) {
-            showCopiedToast = true
-        }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            withAnimation(.easeIn(duration: 0.2)) {
-                showCopiedToast = false
+struct CopyToastView: View {
+    var body: some View {
+        Label("Note copied", systemImage: "checkmark.circle.fill")
+            .font(.callout.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.regularMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(.quaternary, lineWidth: 0.5)
             }
-        }
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
     }
 }
 

@@ -130,6 +130,9 @@ final class EditorViewModel {
     /// Text to hand off to the text view after `load(note:)` completes.
     var loadedContent: String { currentContent }
 
+    /// Latest editor content, including unsaved changes.
+    var contentSnapshot: String { currentContent }
+
     /// Cancel pending saves (e.g. on window close after an explicit save).
     func cancelPendingSave() {
         saveDebouncer.cancel()

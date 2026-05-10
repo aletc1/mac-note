@@ -18,6 +18,7 @@ import os
     var searchText: String = ""
     var selectedCategoryID: String?
     var draftBuffer: DraftBuffer = DraftBuffer()
+    var isShowingCopyToast: Bool = false
 
     // MARK: - Services
 
@@ -30,6 +31,8 @@ import os
 
     /// Set by MacNoteApp at startup so deleteNote can cancel a pending debounced save.
     weak var editorViewModel: EditorViewModel?
+
+    private var copyToastGeneration: Int = 0
 
     // MARK: - Init
 
@@ -149,6 +152,44 @@ import os
             createNote()
         }
         // If already on an empty draft, nothing to do
+    }
+
+    // MARK: - Copy note
+
+    var canCopyCurrentNote: Bool {
+        if draftBuffer.isActive {
+            return !draftBuffer.text.isEmpty
+        }
+        guard selectedNoteID != nil else { return false }
+        return !(editorViewModel?.contentSnapshot ?? "").isEmpty
+    }
+
+    @MainActor
+    func copyCurrentNote() {
+        let content: String
+        if draftBuffer.isActive {
+            content = draftBuffer.text
+        } else {
+            content = editorViewModel?.contentSnapshot ?? ""
+        }
+
+        guard !content.isEmpty else { return }
+
+        NoteClipboardExporter(notesDirectory: noteStore.notesDirectory)
+            .copy(markdown: content)
+
+        copyToastGeneration += 1
+        let generation = copyToastGeneration
+        isShowingCopyToast = true
+
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            await MainActor.run {
+                if self.copyToastGeneration == generation {
+                    self.isShowingCopyToast = false
+                }
+            }
+        }
     }
 
     // MARK: - Language change
