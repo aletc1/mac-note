@@ -159,6 +159,7 @@ extension Notification.Name {
 struct DetailView: View {
     var appModel: AppModel
     @ObservedObject var editorVMBox: EditorViewModelBox
+    @State private var showCopiedToast = false
 
     var body: some View {
         Group {
@@ -168,7 +169,8 @@ struct DetailView: View {
                     note: note,
                     draftText: .constant(""),
                     isDraft: false,
-                    viewModel: editorVMBox
+                    viewModel: editorVMBox,
+                    notesDirectory: appModel.noteStore.notesDirectory
                 )
                 .id(note.id)   // force view recreation on note switch
             } else if appModel.draftBuffer.isActive {
@@ -176,13 +178,75 @@ struct DetailView: View {
                     note: nil,
                     draftText: Bindable(appModel.draftBuffer).text,
                     isDraft: true,
-                    viewModel: editorVMBox
+                    viewModel: editorVMBox,
+                    notesDirectory: appModel.noteStore.notesDirectory
                 )
             } else {
                 EmptyDetailView()
             }
         }
         .frame(minWidth: 400)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                copyButton
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            copiedToast
+        }
+    }
+
+    private var copyButton: some View {
+        Button {
+            copyCurrentNote()
+        } label: {
+            Label("Copy Note", systemImage: "doc.on.doc")
+        }
+        .help("Copy Note")
+        .disabled(!canCopy)
+    }
+
+    private var canCopy: Bool {
+        if appModel.draftBuffer.isActive {
+            return !appModel.draftBuffer.text.isEmpty
+        }
+        return appModel.selectedNoteID != nil
+    }
+
+    @ViewBuilder
+    private var copiedToast: some View {
+        if showCopiedToast {
+            Label("Copied", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.top, 12)
+                .padding(.trailing, 16)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    private var copyableContent: String {
+        if appModel.draftBuffer.isActive {
+            return appModel.draftBuffer.text
+        }
+        guard appModel.selectedNoteID != nil else { return "" }
+        return editorVMBox.vm.loadedContent
+    }
+
+    private func copyCurrentNote() {
+        NoteClipboardExporter(notesDirectory: appModel.noteStore.notesDirectory)
+            .copy(markdown: copyableContent)
+        withAnimation(.easeOut(duration: 0.15)) {
+            showCopiedToast = true
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            withAnimation(.easeIn(duration: 0.2)) {
+                showCopiedToast = false
+            }
+        }
     }
 }
 
