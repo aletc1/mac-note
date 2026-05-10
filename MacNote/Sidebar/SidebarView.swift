@@ -13,9 +13,8 @@ struct SidebarNoteList: View {
     var body: some View {
         @Bindable var model = appModel
         let groups = DateSection.group(notes: appModel.filteredNotes)
-        let hasContent = !groups.isEmpty || appModel.draftBuffer.isActive
 
-        if !hasContent {
+        if groups.isEmpty {
             VStack {
                 Spacer()
                 Text("No Notes")
@@ -25,20 +24,6 @@ struct SidebarNoteList: View {
             }
         } else {
             List(selection: $model.selectedNoteID) {
-                // Draft row (shown when draft mode is active)
-                if appModel.draftBuffer.isActive {
-                    Label {
-                        Text(appModel.draftBuffer.text.isEmpty
-                             ? "New Note"
-                             : NoteItem.titleFromContent(appModel.draftBuffer.text))
-                            .italic()
-                            .foregroundStyle(.secondary)
-                    } icon: {
-                        Image(systemName: "pencil")
-                    }
-                    .tag(UUID?.none as UUID?)
-                }
-
                 ForEach(groups, id: \.section) { group in
                     Section(group.section.rawValue) {
                         ForEach(group.notes) { note in

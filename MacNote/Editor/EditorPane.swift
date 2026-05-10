@@ -11,15 +11,13 @@ struct EditorPane: NSViewRepresentable {
     // MARK: - Bindings / observed state
 
     let note: NoteItem?
-    @Binding var draftText: String
-    let isDraft: Bool
     @ObservedObject var viewModel: EditorViewModelBox
     var notesDirectory: URL = NoteStore.defaultNotesDirectory
 
     // MARK: - NSViewRepresentable
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(viewModel: viewModel.vm, draftText: $draftText)
+        Coordinator(viewModel: viewModel.vm)
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -56,21 +54,19 @@ struct EditorPane: NSViewRepresentable {
         guard let textView = scrollView.documentView as? MacNoteTextView else { return }
         let coordinator = context.coordinator
 
-        if isDraft {
-            if textView.string != draftText {
-                textView.loadMarkdown(draftText)
-                textView.highlighterController?.configure(for: .markdown, textView: textView)
-            }
-        } else if let note {
+        if let note {
             if coordinator.loadedNoteID != note.id {
                 coordinator.loadedNoteID = note.id
                 coordinator.loadedLanguage = note.language
                 Task { @MainActor in
                     await viewModel.vm.load(note: note)
-                    let content = viewModel.vm.loadedContent
+                    let content = viewModel.vm.contentSnapshot
                     textView.currentNoteID = note.id
                     textView.loadMarkdown(content)
                     textView.highlighterController?.configure(for: note.language, textView: textView)
+                    // `load` runs off-main during WAL replay, so the callback isn't fired
+                    // from there. Notify here on the main actor instead.
+                    viewModel.vm.onContentChanged?(!content.isEmpty)
                     Logger.editor.debug("EditorPane: loaded note '\(note.title)'")
                 }
             } else if coordinator.loadedLanguage != note.language {
@@ -85,14 +81,12 @@ struct EditorPane: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
 
         let vm: EditorViewModel
-        var draftText: Binding<String>
         weak var textView: MacNoteTextView?
         var loadedNoteID: UUID?
         var loadedLanguage: NoteLanguage?
 
-        init(viewModel: EditorViewModel, draftText: Binding<String>) {
+        init(viewModel: EditorViewModel) {
             self.vm = viewModel
-            self.draftText = draftText
         }
 
         // MARK: NSTextViewDelegate
@@ -100,14 +94,9 @@ struct EditorPane: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let tv = notification.object as? NSTextView else { return }
             let content = (tv as? MacNoteTextView)?.markdownContent ?? tv.string
-
-            if vm.currentNoteID == nil {
-                draftText.wrappedValue = content
-            } else {
-                vm.updateContent(content)
-                let range = NSRange(location: 0, length: (content as NSString).length)
-                vm.markDirty(in: range, with: content)
-            }
+            vm.updateContent(content)
+            let range = NSRange(location: 0, length: (content as NSString).length)
+            vm.markDirty(in: range, with: content)
             (tv as? MacNoteTextView)?.highlighterController?.invalidateAll()
         }
 
@@ -116,7 +105,7 @@ struct EditorPane: NSViewRepresentable {
             shouldChangeTextIn affectedCharRange: NSRange,
             replacementString: String?
         ) -> Bool {
-            if vm.currentNoteID != nil, let replacement = replacementString {
+            if let replacement = replacementString {
                 vm.markDirty(in: affectedCharRange, with: replacement)
             }
             return true

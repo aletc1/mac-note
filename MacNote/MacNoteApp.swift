@@ -22,6 +22,11 @@ struct MacNoteApp: App {
                     editorVMBox.vm.indexService = appModel.indexService
                     // Give AppModel a weak handle so deleteNote can cancel pending saves.
                     appModel.editorViewModel = editorVMBox.vm
+                    // Mirror editor content state into the @Observable AppModel so the
+                    // toolbar Copy button's disabled state updates reactively.
+                    editorVMBox.vm.onContentChanged = { [weak appModel] hasContent in
+                        appModel?.editorHasContent = hasContent
+                    }
                 }
                 .onDisappear {
                     Task {
@@ -166,20 +171,10 @@ struct DetailView: View {
                let note = appModel.notes.first(where: { $0.id == selectedID }) {
                 EditorPane(
                     note: note,
-                    draftText: .constant(""),
-                    isDraft: false,
                     viewModel: editorVMBox,
                     notesDirectory: appModel.noteStore.notesDirectory
                 )
                 .id(note.id)   // force view recreation on note switch
-            } else if appModel.draftBuffer.isActive {
-                EditorPane(
-                    note: nil,
-                    draftText: Bindable(appModel.draftBuffer).text,
-                    isDraft: true,
-                    viewModel: editorVMBox,
-                    notesDirectory: appModel.noteStore.notesDirectory
-                )
             } else {
                 EmptyDetailView()
             }

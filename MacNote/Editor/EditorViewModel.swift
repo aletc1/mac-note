@@ -25,6 +25,11 @@ final class EditorViewModel {
     var noteStore: NoteStore?
     var indexService: IndexService?
 
+    /// Fired on every transition of `currentContent` so observers (e.g. AppModel)
+    /// can mirror "has any content" into reactive state. Always invoked on the
+    /// main actor, since all current callers run on main.
+    var onContentChanged: ((Bool) -> Void)?
+
     // MARK: - Private
 
     private let journal = RecoveryJournal()
@@ -91,6 +96,7 @@ final class EditorViewModel {
     /// Keep `currentContent` in sync so `saveNow` always has the latest.
     func updateContent(_ content: String) {
         currentContent = content
+        onContentChanged?(!content.isEmpty)
     }
 
     /// Switch the editor to a different note.
@@ -127,10 +133,9 @@ final class EditorViewModel {
         currentContent = recovered
     }
 
-    /// Text to hand off to the text view after `load(note:)` completes.
-    var loadedContent: String { currentContent }
-
-    /// Latest editor content, including unsaved changes.
+    /// Latest editor content, including unsaved changes. Use this both as the
+    /// post-`load(note:)` hand-off to the text view and as the live read-out
+    /// for callers like the copy toolbar.
     var contentSnapshot: String { currentContent }
 
     /// Cancel pending saves (e.g. on window close after an explicit save).
@@ -145,5 +150,6 @@ final class EditorViewModel {
         saveDebouncer.cancel()
         isDirty = false
         currentContent = ""
+        onContentChanged?(false)
     }
 }

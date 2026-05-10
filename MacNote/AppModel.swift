@@ -17,8 +17,11 @@ import os
     var selectedNoteID: UUID?
     var searchText: String = ""
     var selectedCategoryID: String?
-    var draftBuffer: DraftBuffer = DraftBuffer()
     var isShowingCopyToast: Bool = false
+    /// Mirror of `editorViewModel.contentSnapshot.isEmpty == false`, kept on
+    /// `AppModel` so SwiftUI views can observe it reactively. Updated via the
+    /// `EditorViewModel.onContentChanged` callback wired in `MacNoteApp`.
+    var editorHasContent: Bool = false
 
     // MARK: - Services
 
@@ -72,16 +75,15 @@ import os
         // Reconcile disk → index → sidebar
         reconcileIndex()
 
-        // Restore persisted app state
+        // Restore the last open note, fall back to the most recent, or create one
         let state = AppState.load()
         if let lastID = state.lastOpenNoteID,
            notes.contains(where: { $0.id == lastID }) {
             selectedNoteID = lastID
-            draftBuffer.isActive = false
-        }
-        if !state.draftText.isEmpty {
-            draftBuffer.text = state.draftText
-            if selectedNoteID == nil { draftBuffer.isActive = true }
+        } else if let first = notes.first {
+            selectedNoteID = first.id
+        } else {
+            createNote()
         }
 
         // Watch for external file-system changes
@@ -94,41 +96,26 @@ import os
 
     // MARK: - Note creation
 
-    /// Allocates a UUID, creates the file on disk, inserts into the index, and returns the new NoteItem.
+    /// Allocates a UUID, creates the file on disk, inserts into the index, selects it.
     @discardableResult
     @MainActor
     func createNote(language: NoteLanguage = .markdown, categoryID: String? = nil) -> NoteItem {
         do {
             var item = try noteStore.create(uuid: UUID(), language: language)
 
-            // Apply optional category
             if let catID = categoryID {
                 item = NoteItem(id: item.id, title: item.title, language: item.language,
                                 categoryID: catID, createdAt: item.createdAt,
                                 modifiedAt: item.modifiedAt, path: item.path)
             }
 
-            // Seed from draft if active
-            var body = ""
-            if draftBuffer.isActive && !draftBuffer.text.isEmpty {
-                body = draftBuffer.text
-                Task { try? await noteStore.write(content: body, to: item) }
-                item = NoteItem(id: item.id,
-                                title: NoteItem.titleFromContent(body),
-                                language: item.language, categoryID: item.categoryID,
-                                createdAt: item.createdAt, modifiedAt: item.modifiedAt,
-                                path: item.path)
-            }
-
-            try indexService.insert(note: item, body: body)
+            try indexService.insert(note: item, body: "")
             notes.insert(item, at: 0)
-            draftBuffer.promote(to: item.id)
             selectedNoteID = item.id
             Logger.storage.info("Created note \(item.id)")
             return item
         } catch {
             Logger.storage.error("createNote failed: \(error)")
-            // Return a transient placeholder so callers never crash
             let fallback = NoteItem(
                 id: UUID(), title: "Untitled", language: language,
                 categoryID: categoryID, createdAt: Date(), modifiedAt: Date(),
@@ -139,40 +126,29 @@ import os
 
     // MARK: - New note (toolbar button)
 
-    /// Called by the "New Note" button. Saves any draft content first, then opens a fresh blank draft.
+    /// Called by the "New Note" button. If the current note is already empty, does nothing.
+    /// Otherwise creates a fresh note and selects it.
     @MainActor
     func startNewNote() {
-        if draftBuffer.isActive && !draftBuffer.text.isEmpty {
-            // Flush existing draft to disk, then open a fresh blank draft
-            createNote()
-            draftBuffer.clear()
-            selectedNoteID = nil
-        } else if !draftBuffer.isActive {
-            // Editing a saved note — create a new empty note as usual
-            createNote()
+        if let vm = editorViewModel,
+           selectedNoteID != nil,
+           vm.contentSnapshot.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return
         }
-        // If already on an empty draft, nothing to do
+        createNote()
     }
 
     // MARK: - Copy note
 
     var canCopyCurrentNote: Bool {
-        if draftBuffer.isActive {
-            return !draftBuffer.text.isEmpty
-        }
         guard selectedNoteID != nil else { return false }
-        return !(editorViewModel?.contentSnapshot ?? "").isEmpty
+        return editorHasContent
     }
 
     @MainActor
     func copyCurrentNote() {
-        let content: String
-        if draftBuffer.isActive {
-            content = draftBuffer.text
-        } else {
-            content = editorViewModel?.contentSnapshot ?? ""
-        }
-
+        guard canCopyCurrentNote else { return }
+        let content = editorViewModel?.contentSnapshot ?? ""
         guard !content.isEmpty else { return }
 
         NoteClipboardExporter(notesDirectory: noteStore.notesDirectory)
@@ -182,12 +158,13 @@ import os
         let generation = copyToastGeneration
         isShowingCopyToast = true
 
+        // `Task { ... }` spawned from a `@MainActor` function inherits main-actor
+        // isolation, so the body already runs on main — no inner `MainActor.run`
+        // required.
         Task {
             try? await Task.sleep(for: .seconds(1.5))
-            await MainActor.run {
-                if self.copyToastGeneration == generation {
-                    self.isShowingCopyToast = false
-                }
+            if self.copyToastGeneration == generation {
+                self.isShowingCopyToast = false
             }
         }
     }
@@ -304,7 +281,7 @@ import os
     func saveState(cursorLocation: Int = 0) {
         let state = AppState(
             lastOpenNoteID: selectedNoteID,
-            draftText: draftBuffer.isActive ? draftBuffer.text : "",
+            draftText: "",
             windowFrame: nil,
             cursorLocation: cursorLocation
         )

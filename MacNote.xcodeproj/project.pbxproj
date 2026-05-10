@@ -48,6 +48,7 @@
 		BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */; };
 		5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */; };
 		D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */; };
+		AA67D2AF46A24E4BA5EB9FC4 /* AppModelCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */; };
 		A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -95,6 +96,7 @@
 		7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftBufferTests.swift; sourceTree = "<group>"; };
 		DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelDeleteTests.swift; sourceTree = "<group>"; };
+		01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelCopyTests.swift; sourceTree = "<group>"; };
 		2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteClipboardExporterTests.swift; sourceTree = "<group>"; };
 		5D41DF3FBB9F4C5BA72CAC6D /* MacNoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -259,6 +261,7 @@
 				7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */,
 				DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */,
 				8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */,
+				01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */,
 				2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */,
 			);
 			path = MacNoteTests;
@@ -402,6 +405,7 @@
 				BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */,
 				5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */,
 				D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */,
+				AA67D2AF46A24E4BA5EB9FC4 /* AppModelCopyTests.swift in Sources */,
 				A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -3,15 +3,47 @@ import os
 
 // MARK: - ImageAttachment
 
+enum ImageDisplaySize: Int, CaseIterable {
+    case small
+    case medium
+    case large
+    case originalFit
+
+    var menuTitle: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Large"
+        case .originalFit: return "Original Fit"
+        }
+    }
+
+    var maxWidth: CGFloat? {
+        switch self {
+        case .small: return 200
+        case .medium: return 400
+        case .large: return 720
+        case .originalFit: return nil
+        }
+    }
+}
+
 /// NSTextAttachment subclass that remembers its markdown source so `markdownContent`
 /// can reconstruct the raw `![alt](filename)` string for saving.
 final class ImageAttachment: NSTextAttachment {
     let markdownSource: String
     let filename: String
+    var displaySize: ImageDisplaySize
 
-    init(image: NSImage, filename: String, markdownSource: String) {
+    init(
+        image: NSImage,
+        filename: String,
+        markdownSource: String,
+        displaySize: ImageDisplaySize = .medium
+    ) {
         self.filename = filename
         self.markdownSource = markdownSource
+        self.displaySize = displaySize
         super.init(data: nil, ofType: nil)
         self.image = image
         // Non-zero initial bounds so TextKit renders the attachment before the
@@ -34,9 +66,11 @@ final class ImageAttachment: NSTextAttachment {
         characterIndex charIndex: Int
     ) -> CGRect {
         guard let img = image, img.size.width > 0, img.size.height > 0 else { return bounds }
-        let available = lineFrag.size.width
+        let widthCap = displaySize.maxWidth ?? lineFrag.size.width
+        let available = min(lineFrag.size.width, widthCap)
         guard available > 0 else { return bounds }
-        let scale = available / img.size.width
+        let targetWidth = min(img.size.width, available)
+        let scale = targetWidth / img.size.width
         return CGRect(x: 0, y: 0,
                       width: (img.size.width * scale).rounded(),
                       height: (img.size.height * scale).rounded())
@@ -53,6 +87,7 @@ final class MacNoteTextView: NSTextView {
     var imageRenderer: ImageRenderer?
     var notesDirectory: URL = NoteStore.defaultNotesDirectory
     var currentNoteID: UUID?
+    private var contextMenuAttachment: ImageAttachment?
 
     // MARK: - Private
 
@@ -202,6 +237,39 @@ final class MacNoteTextView: NSTextView {
         return super.performDragOperation(sender)
     }
 
+    // MARK: - Context menu
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        guard let (attachment, range) = imageAttachment(at: point) else {
+            return super.menu(for: event)
+        }
+
+        contextMenuAttachment = attachment
+        setSelectedRange(range)
+
+        let menu = NSMenu(title: "Image")
+
+        let openItem = NSMenuItem(title: "Open Original",
+                                  action: #selector(openOriginalImageFromMenu(_:)),
+                                  keyEquivalent: "")
+        openItem.target = self
+        menu.addItem(openItem)
+        menu.addItem(.separator())
+
+        for size in ImageDisplaySize.allCases {
+            let item = NSMenuItem(title: size.menuTitle,
+                                  action: #selector(setImageDisplaySizeFromMenu(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.tag = size.rawValue
+            item.state = attachment.displaySize == size ? .on : .off
+            menu.addItem(item)
+        }
+
+        return menu
+    }
+
     // MARK: - Smart cursor (skip over image attachments)
 
     override func keyDown(with event: NSEvent) {
@@ -225,6 +293,55 @@ final class MacNoteTextView: NSTextView {
     // MARK: - Private helpers
 
     private enum Direction { case forward, backward }
+
+    private func imageAttachment(at point: NSPoint) -> (ImageAttachment, NSRange)? {
+        guard let layoutManager, let textContainer, let textStorage else { return nil }
+
+        let containerPoint = NSPoint(x: point.x - textContainerOrigin.x,
+                                     y: point.y - textContainerOrigin.y)
+        guard containerPoint.x >= 0, containerPoint.y >= 0 else { return nil }
+
+        let glyphIndex = layoutManager.glyphIndex(for: containerPoint, in: textContainer)
+        let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
+        guard charIndex < textStorage.length else { return nil }
+
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: NSRange(location: charIndex, length: 1),
+                                                  actualCharacterRange: nil)
+        let rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+            .offsetBy(dx: textContainerOrigin.x, dy: textContainerOrigin.y)
+        guard rect.insetBy(dx: -4, dy: -4).contains(point) else { return nil }
+
+        let attachmentRange = NSRange(location: 0, length: 0)
+        var effectiveRange = attachmentRange
+        guard let attachment = textStorage.attribute(.attachment,
+                                                     at: charIndex,
+                                                     effectiveRange: &effectiveRange) as? ImageAttachment
+        else { return nil }
+
+        return (attachment, effectiveRange)
+    }
+
+    private func refreshAttachmentLayout() {
+        guard let layoutManager, let textContainer else { return }
+        layoutManager.invalidateLayout(forCharacterRange: NSRange(location: 0, length: textStorage?.length ?? 0),
+                                       actualCharacterRange: nil)
+        layoutManager.ensureLayout(for: textContainer)
+        needsDisplay = true
+    }
+
+    @objc
+    private func openOriginalImageFromMenu(_ sender: NSMenuItem) {
+        guard let attachment = contextMenuAttachment else { return }
+        NSWorkspace.shared.open(notesDirectory.appendingPathComponent(attachment.filename))
+    }
+
+    @objc
+    private func setImageDisplaySizeFromMenu(_ sender: NSMenuItem) {
+        guard let size = ImageDisplaySize(rawValue: sender.tag),
+              let attachment = contextMenuAttachment else { return }
+        attachment.displaySize = size
+        refreshAttachmentLayout()
+    }
 
     @discardableResult
     private func trySkipAttachment(direction: Direction) -> Bool {
@@ -256,7 +373,7 @@ final class MacNoteTextView: NSTextView {
     /// Convert `image` to PNG, write via `ImageStore`, insert an `ImageAttachment` at the caret.
     private func insertInlineImage(_ image: NSImage, filename: String?) {
         guard let noteID = currentNoteID else {
-            Logger.paste.warning("Image paste in draft mode — skipped")
+            Logger.paste.warning("insertInlineImage called with no currentNoteID — skipped")
             return
         }
         guard let pngData = image.pngRepresentation() else {
@@ -271,6 +388,10 @@ final class MacNoteTextView: NSTextView {
             let insertAt = selectedRange().location
             textStorage?.insert(NSAttributedString(attachment: attachment), at: insertAt)
             setSelectedRange(NSRange(location: insertAt + 1, length: 0))
+            // textStorage.insert bypasses NSTextView's normal event path, so delegate
+            // callbacks (textDidChange) never fire. Call didChangeText() explicitly so
+            // the editor view model updates its content snapshot and marks the note dirty.
+            didChangeText()
             Logger.paste.info("Inserted inline image: \(name)")
         } catch {
             Logger.paste.error("Failed to save image: \(error)")
