@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Type-check all app sources** (fast, no Xcode needed):
 ```
-swiftc -typecheck -sdk $(xcrun --show-sdk-path --sdk macosx) \
+swiftc -typecheck -disable-sandbox -sdk $(xcrun --show-sdk-path --sdk macosx) \
   -target arm64-apple-macosx14.0 \
   $(find MacNote -name "*.swift" | sort)
 ```
@@ -53,7 +53,7 @@ xcodebuild test -project MacNote.xcodeproj -scheme MacNote \
 plutil -lint MacNote.xcodeproj/project.pbxproj
 ```
 
-> Note: On this machine `xcodebuild` has a plugin-load issue (`DVTDownloads.framework` mismatch with Xcode 26 beta). Use `swiftc -typecheck` to verify compilation and open in the Xcode IDE for running/testing.
+> Note: On this machine `xcodebuild` has a plugin-load issue (`DVTDownloads.framework` mismatch with Xcode 26 beta). Use `swiftc -typecheck -disable-sandbox` to verify compilation and open in the Xcode IDE for running/testing. The extra flag is required here so Swift macro/plugin subprocesses can start under the current sandbox.
 
 ## Architecture
 
