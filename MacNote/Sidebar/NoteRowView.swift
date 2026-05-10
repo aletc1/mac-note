@@ -46,6 +46,10 @@ struct SidebarNoteRow: View {
                     }
                 }
             }
+            Divider()
+            Button("Delete Note\u{2026}", role: .destructive) {
+                NotificationCenter.default.post(name: .requestDeleteNote, object: note.id)
+            }
         }
     }
 

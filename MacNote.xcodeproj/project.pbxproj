@@ -46,6 +46,7 @@
 		A19743C08CDC4C81B6436B6F /* NoteItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F03ABDD18514A3FA2DCA9C2 /* NoteItemTests.swift */; };
 		BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */; };
 		5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */; };
+		D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +91,7 @@
 		9F03ABDD18514A3FA2DCA9C2 /* NoteItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteItemTests.swift; sourceTree = "<group>"; };
 		7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftBufferTests.swift; sourceTree = "<group>"; };
 		DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
+		8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelDeleteTests.swift; sourceTree = "<group>"; };
 		5D41DF3FBB9F4C5BA72CAC6D /* MacNoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -251,6 +253,7 @@
 				9F03ABDD18514A3FA2DCA9C2 /* NoteItemTests.swift */,
 				7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */,
 				DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */,
+				8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */,
 			);
 			path = MacNoteTests;
 			sourceTree = "<group>";
@@ -391,6 +394,7 @@
 				A19743C08CDC4C81B6436B6F /* NoteItemTests.swift in Sources */,
 				BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */,
 				5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */,
+				D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

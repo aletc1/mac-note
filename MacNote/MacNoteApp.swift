@@ -20,6 +20,8 @@ struct MacNoteApp: App {
                     // Wire storage dependencies into the editor view model
                     editorVMBox.vm.noteStore    = appModel.noteStore
                     editorVMBox.vm.indexService = appModel.indexService
+                    // Give AppModel a weak handle so deleteNote can cancel pending saves.
+                    appModel.editorViewModel = editorVMBox.vm
                 }
                 .onDisappear {
                     Task {
@@ -33,6 +35,7 @@ struct MacNoteApp: App {
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             FormatMenuCommands(appModel: AppModelBox(appModel))
+            DeleteNoteCommands(appModel: AppModelBox(appModel))
         }
     }
 }
@@ -60,6 +63,7 @@ struct ContentView: View {
 struct SidebarView: View {
     var appModel: AppModel
     @State private var showCategoryEditor = false
+    @State private var pendingDeleteID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -109,7 +113,45 @@ struct SidebarView: View {
             CategoryEditorSheet()
                 .environment(appModel)
         }
+        .alert("Delete this note?",
+               isPresented: Binding(
+                   get: { pendingDeleteID != nil },
+                   set: { if !$0 { pendingDeleteID = nil } }
+               )) {
+            Button("Delete", role: .destructive) {
+                if let id = pendingDeleteID { appModel.deleteNote(id: id) }
+                pendingDeleteID = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDeleteID = nil }
+        } message: {
+            Text("The note and its images will be moved to ~/.notes/.trash/.")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .requestDeleteNote)) { note in
+            if let id = note.object as? UUID { pendingDeleteID = id }
+        }
     }
+}
+
+// MARK: - DeleteNoteCommands
+
+struct DeleteNoteCommands: Commands {
+    @ObservedObject var appModel: AppModelBox
+
+    var body: some Commands {
+        CommandGroup(after: .pasteboard) {
+            Button("Delete Note\u{2026}") {
+                if let id = appModel.model.selectedNoteID {
+                    NotificationCenter.default.post(name: .requestDeleteNote, object: id)
+                }
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(appModel.model.selectedNoteID == nil)
+        }
+    }
+}
+
+extension Notification.Name {
+    static let requestDeleteNote = Notification.Name("MacNote.requestDeleteNote")
 }
 
 // MARK: - DetailView

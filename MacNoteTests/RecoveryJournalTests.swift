@@ -68,6 +68,20 @@ final class RecoveryJournalTests: XCTestCase {
         XCTAssertTrue(replayed.isEmpty)
     }
 
+    func testDeleteWALRemovesFile() throws {
+        let noteID = UUID()
+        let entry = RecoveryJournal.Entry(range: NSRange(location: 0, length: 0), replacement: "X", timestamp: Date())
+        try journal.append(entry: entry, for: noteID)
+        let walURL = tmpDir.appendingPathComponent("\(noteID.uuidString).wal")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: walURL.path))
+        try journal.deleteWAL(for: noteID)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: walURL.path))
+    }
+
+    func testDeleteWALIsNoopForMissingFile() throws {
+        XCTAssertNoThrow(try journal.deleteWAL(for: UUID()))
+    }
+
     func testCorruptedTrailingEntryIsSkippedOnReplay() throws {
         let noteID = UUID()
         let good = RecoveryJournal.Entry(range: NSRange(location: 0, length: 0), replacement: "good", timestamp: Date())

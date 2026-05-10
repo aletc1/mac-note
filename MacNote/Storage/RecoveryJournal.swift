@@ -151,6 +151,16 @@ final class RecoveryJournal {
         return entries
     }
 
+    // MARK: - Delete WAL
+
+    /// Remove the WAL file for a deleted note.
+    func deleteWAL(for noteID: UUID) throws {
+        let url = walURL(for: noteID)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try FileManager.default.removeItem(at: url)
+        logger.debug("Deleted WAL for note \(noteID)")
+    }
+
     // MARK: - Truncate
 
     /// Zero out (truncate to 0 bytes) the WAL after a successful save.

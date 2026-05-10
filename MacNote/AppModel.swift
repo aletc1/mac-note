@@ -21,10 +21,30 @@ import os
 
     // MARK: - Services
 
-    let noteStore     = NoteStore()
-    let indexService  = IndexService()
-    let categoryStore = CategoryStore()
-    let fileWatcher   = FileWatcher()
+    let noteStore: NoteStore
+    let indexService: IndexService
+    let categoryStore: CategoryStore
+    let fileWatcher: FileWatcher
+    let imageStore: ImageStore
+    let recoveryJournal: RecoveryJournal
+
+    /// Set by MacNoteApp at startup so deleteNote can cancel a pending debounced save.
+    weak var editorViewModel: EditorViewModel?
+
+    // MARK: - Init
+
+    init(
+        notesDirectory: URL = NoteStore.defaultNotesDirectory,
+        indexSupportDirectory: URL? = nil,
+        recoveryDirectory: URL? = nil
+    ) {
+        noteStore       = NoteStore(notesDirectory: notesDirectory)
+        indexService    = IndexService(supportDirectory: indexSupportDirectory)
+        categoryStore   = CategoryStore()
+        fileWatcher     = FileWatcher()
+        imageStore      = ImageStore(notesDirectory: notesDirectory)
+        recoveryJournal = RecoveryJournal(recoveryDirectory: recoveryDirectory)
+    }
 
     // MARK: - Startup
 
@@ -161,6 +181,35 @@ import os
         try? XattrMetadata.write(NoteXattr(categoryID: categoryID, createdAt: n.createdAt),
                                  to: n.path)
         try? indexService.update(note: updated, body: "")
+    }
+
+    // MARK: - Delete note
+
+    @MainActor
+    func deleteNote(id: UUID) {
+        guard let idx = notes.firstIndex(where: { $0.id == id }) else { return }
+        let note = notes[idx]
+
+        // Cancel any pending debounced save so it can't resurrect the file.
+        if selectedNoteID == id {
+            editorViewModel?.discardPendingChanges()
+            selectedNoteID = nil
+        }
+
+        do { try noteStore.moveToTrash(note: note) }
+        catch { Logger.storage.error("deleteNote: moveToTrash failed: \(error)") }
+
+        do { try imageStore.garbageCollect(noteUUID: id, liveReferences: []) }
+        catch { Logger.storage.error("deleteNote: image GC failed: \(error)") }
+
+        do { try recoveryJournal.deleteWAL(for: id) }
+        catch { Logger.storage.error("deleteNote: WAL delete failed: \(error)") }
+
+        do { try indexService.delete(noteID: id) }
+        catch { Logger.index.error("deleteNote: index delete failed: \(error)") }
+
+        notes.remove(at: idx)
+        Logger.app.info("Deleted note \(id)")
     }
 
     // MARK: - Filtered notes (sidebar)

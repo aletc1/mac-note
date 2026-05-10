@@ -134,4 +134,13 @@ final class EditorViewModel {
     func cancelPendingSave() {
         saveDebouncer.cancel()
     }
+
+    /// Drop any pending debounced save without flushing.
+    /// Called before a note is deleted so the debounce cannot resurrect its file.
+    @MainActor
+    func discardPendingChanges() {
+        saveDebouncer.cancel()
+        isDirty = false
+        currentContent = ""
+    }
 }

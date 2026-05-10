@@ -45,11 +45,30 @@ final class NoteStoreTests: XCTestCase {
         XCTAssertEqual(urls.count, 2)
     }
 
-    func testDeleteRemovesFile() throws {
+    func testMoveToTrashRelocatesFile() throws {
         let note = try store.create(uuid: UUID(), language: .markdown)
         XCTAssertTrue(FileManager.default.fileExists(atPath: note.path.path))
-        try store.delete(note: note)
+        try store.moveToTrash(note: note)
         XCTAssertFalse(FileManager.default.fileExists(atPath: note.path.path))
+        let trashPath = tmpDir
+            .appendingPathComponent(".trash")
+            .appendingPathComponent(note.path.lastPathComponent)
+            .path
+        XCTAssertTrue(FileManager.default.fileExists(atPath: trashPath))
+    }
+
+    func testMoveToTrashTimestampPrefixOnCollision() throws {
+        let note = try store.create(uuid: UUID(), language: .markdown)
+        try store.moveToTrash(note: note)
+        // Write a new file at the same original path to simulate collision.
+        try Data("new".utf8).write(to: note.path)
+        let note2 = NoteItem(id: note.id, title: note.title, language: note.language,
+                             categoryID: nil, createdAt: note.createdAt,
+                             modifiedAt: note.modifiedAt, path: note.path)
+        try store.moveToTrash(note: note2)
+        let trash = tmpDir.appendingPathComponent(".trash")
+        let items = try FileManager.default.contentsOfDirectory(atPath: trash.path)
+        XCTAssertEqual(items.count, 2)
     }
 
     func testWriteDoesNotChangeUUID() throws {

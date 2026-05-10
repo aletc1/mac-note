@@ -116,11 +116,22 @@ final class NoteStore {
         return updated
     }
 
-    // MARK: - Delete
+    // MARK: - Delete (move to .trash)
 
-    func delete(note: NoteItem) throws {
-        try fm.removeItem(at: note.path)
-        logger.debug("Deleted note \(note.id)")
+    /// Move the note's file into `~/.notes/.trash/` so it can be recovered manually.
+    /// If a file with the same name already exists in `.trash/`, a timestamp prefix is added.
+    func moveToTrash(note: NoteItem) throws {
+        let trashDir = notesDirectory.appendingPathComponent(".trash", isDirectory: true)
+        try fm.createDirectory(at: trashDir, withIntermediateDirectories: true)
+
+        let baseName = note.path.lastPathComponent
+        var dest = trashDir.appendingPathComponent(baseName)
+        if fm.fileExists(atPath: dest.path) {
+            let ts = Int(Date().timeIntervalSince1970)
+            dest = trashDir.appendingPathComponent("\(ts)-\(baseName)")
+        }
+        try fm.moveItem(at: note.path, to: dest)
+        logger.debug("Moved note \(note.id) to .trash/")
     }
 
     // MARK: - List
