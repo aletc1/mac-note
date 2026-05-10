@@ -14,6 +14,7 @@
 		98FABE887206480FA051C63C /* EditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA4B7E61B9644ECAF2D1448 /* EditorViewModel.swift */; };
 		3B102E4803654155823DF1A8 /* HighlighterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55C91FCAA5B4D01951C068D /* HighlighterController.swift */; };
 		8999C178360D455A9026186D /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6785421DA8E04B9CA8EEFB05 /* ImageRenderer.swift */; };
+		F781F6E93F034C179B03FB79 /* NoteClipboardExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFAB8B8EDF7A4897A9F798CD /* NoteClipboardExporter.swift */; };
 		22C7427744CE459DB45C8D37 /* FormatMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4431792364014444A3615F21 /* FormatMenuCommands.swift */; };
 		7CAB70E3A2B249D0882A72DB /* NoteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696413269EA14353A4A18BBF /* NoteItem.swift */; };
 		5232DF67C566433E882BA097 /* NoteLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E35AAF07C134808989BB678 /* NoteLanguage.swift */; };
@@ -47,6 +48,7 @@
 		BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */; };
 		5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */; };
 		D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */; };
+		A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +59,7 @@
 		5AA4B7E61B9644ECAF2D1448 /* EditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewModel.swift; sourceTree = "<group>"; };
 		D55C91FCAA5B4D01951C068D /* HighlighterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlighterController.swift; sourceTree = "<group>"; };
 		6785421DA8E04B9CA8EEFB05 /* ImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageRenderer.swift; sourceTree = "<group>"; };
+		EFAB8B8EDF7A4897A9F798CD /* NoteClipboardExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteClipboardExporter.swift; sourceTree = "<group>"; };
 		4431792364014444A3615F21 /* FormatMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormatMenuCommands.swift; sourceTree = "<group>"; };
 		696413269EA14353A4A18BBF /* NoteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteItem.swift; sourceTree = "<group>"; };
 		7E35AAF07C134808989BB678 /* NoteLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteLanguage.swift; sourceTree = "<group>"; };
@@ -92,6 +95,7 @@
 		7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftBufferTests.swift; sourceTree = "<group>"; };
 		DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStateTests.swift; sourceTree = "<group>"; };
 		8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelDeleteTests.swift; sourceTree = "<group>"; };
+		2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteClipboardExporterTests.swift; sourceTree = "<group>"; };
 		5D41DF3FBB9F4C5BA72CAC6D /* MacNoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -158,6 +162,7 @@
 				5AA4B7E61B9644ECAF2D1448 /* EditorViewModel.swift */,
 				D55C91FCAA5B4D01951C068D /* HighlighterController.swift */,
 				6785421DA8E04B9CA8EEFB05 /* ImageRenderer.swift */,
+				EFAB8B8EDF7A4897A9F798CD /* NoteClipboardExporter.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -254,6 +259,7 @@
 				7B29B36C43A044C992A39ECA /* DraftBufferTests.swift */,
 				DA2500CA44A34A7DA6252F60 /* AppStateTests.swift */,
 				8F6B7163CD35417988EDA231 /* AppModelDeleteTests.swift */,
+				2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */,
 			);
 			path = MacNoteTests;
 			sourceTree = "<group>";
@@ -356,6 +362,7 @@
 				98FABE887206480FA051C63C /* EditorViewModel.swift in Sources */,
 				3B102E4803654155823DF1A8 /* HighlighterController.swift in Sources */,
 				8999C178360D455A9026186D /* ImageRenderer.swift in Sources */,
+				F781F6E93F034C179B03FB79 /* NoteClipboardExporter.swift in Sources */,
 				22C7427744CE459DB45C8D37 /* FormatMenuCommands.swift in Sources */,
 				7CAB70E3A2B249D0882A72DB /* NoteItem.swift in Sources */,
 				5232DF67C566433E882BA097 /* NoteLanguage.swift in Sources */,
@@ -395,6 +402,7 @@
 				BED54B4BA82A4B43BA7CA4C6 /* DraftBufferTests.swift in Sources */,
 				5E7B15EA691D469F89C492D8 /* AppStateTests.swift in Sources */,
 				D9A606A690B5409787391445 /* AppModelDeleteTests.swift in Sources */,
+				A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
