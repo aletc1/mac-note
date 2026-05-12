@@ -1,0 +1,24 @@
+{
+  "scripts": [
+    {
+      "name": "typecheck",
+      "command": "swiftc -typecheck -disable-sandbox -sdk $(xcrun --show-sdk-path --sdk macosx) -target arm64-apple-macosx14.0 $(find MacNote -name '*.swift' | sort)"
+    },
+    {
+      "name": "build",
+      "command": "xcodebuild -project MacNote.xcodeproj -scheme MacNote -configuration Debug CODE_SIGNING_ALLOWED=NO build"
+    },
+    {
+      "name": "run",
+      "command": "xcodebuild -project MacNote.xcodeproj -scheme MacNote -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath build build && killall MacNote 2>/dev/null; open -n build/Build/Products/Debug/MacNote.app"
+    },
+    {
+      "name": "test",
+      "command": "xcodebuild test -project MacNote.xcodeproj -scheme MacNote CODE_SIGNING_ALLOWED=NO"
+    },
+    {
+      "name": "validate-project",
+      "command": "plutil -lint MacNote.xcodeproj/project.pbxproj"
+    }
+  ]
+}

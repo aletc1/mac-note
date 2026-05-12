@@ -19,5 +19,8 @@ DerivedData/
 .idea/
 .vscode/
 
+# Local build output (run script)
+build/
+
 # Temp StoreKit files
 MacNote/Resources/*.storekit
