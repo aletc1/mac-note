@@ -102,7 +102,6 @@ struct SidebarView: View {
                     Label("New Note", systemImage: "square.and.pencil")
                 }
                 .buttonStyle(.borderless)
-                .keyboardShortcut("n", modifiers: .command)
                 Spacer()
                 Button {
                     showCategoryEditor = true
@@ -114,6 +113,19 @@ struct SidebarView: View {
             .padding(8)
         }
         .frame(minWidth: 220)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    appModel.startNewNote()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 15, weight: .regular))
+                        .imageScale(.medium)
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .help("New Note")
+            }
+        }
         .sheet(isPresented: $showCategoryEditor) {
             CategoryEditorSheet()
                 .environment(appModel)
