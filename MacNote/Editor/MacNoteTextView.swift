@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import os
 
 // MARK: - ImageAttachment
@@ -237,6 +238,42 @@ final class MacNoteTextView: NSTextView {
         return super.performDragOperation(sender)
     }
 
+    // MARK: - Copy override
+
+    override func copy(_ sender: Any?) {
+        // If the selection resolves to a single image (optionally surrounded by
+        // whitespace), copy the image bytes instead of routing to text copy.
+        if let attachment = soleImageAttachment(in: selectedRange()) {
+            copyImageToClipboard(attachment)
+            return
+        }
+        super.copy(sender)
+    }
+
+    /// Returns the only `ImageAttachment` in `range` if the rest of the range
+    /// contains nothing but whitespace; otherwise nil.
+    private func soleImageAttachment(in range: NSRange) -> ImageAttachment? {
+        guard let ts = textStorage, range.length > 0,
+              range.location >= 0, range.location + range.length <= ts.length
+        else { return nil }
+
+        var found: ImageAttachment?
+        var rejected = false
+        ts.enumerateAttribute(.attachment, in: range, options: []) { value, subRange, stop in
+            if let img = value as? ImageAttachment {
+                if found != nil { rejected = true; stop.pointee = true; return }
+                found = img
+            } else {
+                let text = (ts.string as NSString).substring(with: subRange)
+                if text.unicodeScalars.contains(where: { !CharacterSet.whitespacesAndNewlines.contains($0) }) {
+                    rejected = true
+                    stop.pointee = true
+                }
+            }
+        }
+        return rejected ? nil : found
+    }
+
     // MARK: - Context menu
 
     override func menu(for event: NSEvent) -> NSMenu? {
@@ -249,6 +286,14 @@ final class MacNoteTextView: NSTextView {
         setSelectedRange(range)
 
         let menu = NSMenu(title: "Image")
+
+        let copyItem = NSMenuItem(title: "Copy Image",
+                                  action: #selector(copyImageFromMenu(_:)),
+                                  keyEquivalent: "c")
+        copyItem.keyEquivalentModifierMask = .command
+        copyItem.target = self
+        menu.addItem(copyItem)
+        menu.addItem(.separator())
 
         let openItem = NSMenuItem(title: "Open Original",
                                   action: #selector(openOriginalImageFromMenu(_:)),
@@ -330,9 +375,41 @@ final class MacNoteTextView: NSTextView {
     }
 
     @objc
+    private func copyImageFromMenu(_ sender: NSMenuItem) {
+        guard let attachment = contextMenuAttachment else { return }
+        copyImageToClipboard(attachment)
+    }
+
+    @objc
     private func openOriginalImageFromMenu(_ sender: NSMenuItem) {
         guard let attachment = contextMenuAttachment else { return }
         NSWorkspace.shared.open(notesDirectory.appendingPathComponent(attachment.filename))
+    }
+
+    private func copyImageToClipboard(_ attachment: ImageAttachment) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        let url = notesDirectory.appendingPathComponent(attachment.filename)
+        // Prefer original file bytes under the resolved UTI so receivers get the
+        // exact source format. Fall back to NSImage when the extension isn't a
+        // known concrete image type or the file is unreadable — writing under
+        // the abstract `public.image` UTI leaves many paste targets unable to
+        // decode the data.
+        if let type = Self.pasteboardType(forExtension: url.pathExtension),
+           let data = try? Data(contentsOf: url) {
+            pb.setData(data, forType: type)
+        } else if let img = attachment.image {
+            pb.writeObjects([img])
+        }
+    }
+
+    /// Resolves a file extension to a concrete image pasteboard type, or nil if
+    /// the extension doesn't conform to `UTType.image`.
+    static func pasteboardType(forExtension ext: String) -> NSPasteboard.PasteboardType? {
+        guard let type = UTType(filenameExtension: ext.lowercased()),
+              type.conforms(to: .image)
+        else { return nil }
+        return NSPasteboard.PasteboardType(type.identifier)
     }
 
     @objc

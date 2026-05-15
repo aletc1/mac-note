@@ -51,6 +51,7 @@
 		AA67D2AF46A24E4BA5EB9FC4 /* AppModelCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */; };
 		A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */; };
 		08E27D4E247242E3B0431D81 /* CategoryChipContrastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB217262AC2486BB656605D /* CategoryChipContrastTests.swift */; };
+		F720D990535D43CFA30E8715 /* MacNoteTextViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F53B2CABA3549F085F68979 /* MacNoteTextViewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -100,6 +101,7 @@
 		01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelCopyTests.swift; sourceTree = "<group>"; };
 		2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteClipboardExporterTests.swift; sourceTree = "<group>"; };
 		8BB217262AC2486BB656605D /* CategoryChipContrastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryChipContrastTests.swift; sourceTree = "<group>"; };
+		8F53B2CABA3549F085F68979 /* MacNoteTextViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacNoteTextViewTests.swift; sourceTree = "<group>"; };
 		5D41DF3FBB9F4C5BA72CAC6D /* MacNoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacNoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -266,6 +268,7 @@
 				01EA1893B44C4AA586E4415F /* AppModelCopyTests.swift */,
 				2412110388854FDAA747972A /* NoteClipboardExporterTests.swift */,
 				8BB217262AC2486BB656605D /* CategoryChipContrastTests.swift */,
+				8F53B2CABA3549F085F68979 /* MacNoteTextViewTests.swift */,
 			);
 			path = MacNoteTests;
 			sourceTree = "<group>";
@@ -411,6 +414,7 @@
 				AA67D2AF46A24E4BA5EB9FC4 /* AppModelCopyTests.swift in Sources */,
 				A8FB70403E42485D819AF441 /* NoteClipboardExporterTests.swift in Sources */,
 				08E27D4E247242E3B0431D81 /* CategoryChipContrastTests.swift in Sources */,
+				F720D990535D43CFA30E8715 /* MacNoteTextViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
