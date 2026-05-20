@@ -37,6 +37,7 @@
 		BFEE6095A5374F0AB5A443AA /* Debouncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC2920B4A9A84E868A06C7F9 /* Debouncer.swift */; };
 		D0901082800B4FB6ABFAEBCB /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF006BBA85CF45179CB3CC73 /* Logging.swift */; };
 		193D230900614C37A4EF01D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8FD803527C0542FD8D5113BD /* Assets.xcassets */; };
+		C21CE126C22E4201A1925FF7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2D2EB004A2B64473A3E14019 /* InfoPlist.strings */; };
 		E5BF79A5BB9C466DBBB2DEE8 /* NoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92D94F1C9A104C50BD374316 /* NoteStoreTests.swift */; };
 		02CC4B5C63914DCE8B0380AA /* RecoveryJournalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0178BBBE48A346CAA27BA5E4 /* RecoveryJournalTests.swift */; };
 		15B51E61C7C24EFEACB20F51 /* IndexServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5537BFE4C4E84F5D8BE10EE6 /* IndexServiceTests.swift */; };
@@ -85,6 +86,8 @@
 		BC2920B4A9A84E868A06C7F9 /* Debouncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debouncer.swift; sourceTree = "<group>"; };
 		FF006BBA85CF45179CB3CC73 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		8FD803527C0542FD8D5113BD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1D6AB8A3E3F94968B66C59DA /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5B88FE2620014E0C9740A038 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C1FD8D7AD3A14E2CB0F13CF3 /* MacNote.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacNote.entitlements; sourceTree = "<group>"; };
 		14597CDA2DC144F3A304D0B3 /* MacNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		92D94F1C9A104C50BD374316 /* NoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteStoreTests.swift; sourceTree = "<group>"; };
@@ -247,6 +250,7 @@
 			isa = PBXGroup;
 			children = (
 				8FD803527C0542FD8D5113BD /* Assets.xcassets */,
+				2D2EB004A2B64473A3E14019 /* InfoPlist.strings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -274,6 +278,18 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		2D2EB004A2B64473A3E14019 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1D6AB8A3E3F94968B66C59DA /* en */,
+				5B88FE2620014E0C9740A038 /* es */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		FF828CB3AD9D49BAA4CDAE04 /* MacNote */ = {
@@ -335,6 +351,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				es,
 				Base,
 			);
 			mainGroup = 0469D9DCFA864E76A66ED230;
@@ -354,6 +371,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				193D230900614C37A4EF01D9 /* Assets.xcassets in Resources */,
+				C21CE126C22E4201A1925FF7 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
