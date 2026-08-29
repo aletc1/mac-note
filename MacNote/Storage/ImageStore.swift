@@ -25,7 +25,8 @@ final class ImageStore {
     /// If a file with the same hash already exists it is reused (content-addressed).
     func write(imageData: Data, ext: String, for noteUUID: UUID) throws -> String {
         let hash = contentHash(imageData)
-        let filename = "\(noteUUID.uuidString)-\(hash).\(ext)"
+        // Lowercased so the UUID segment matches the lowercase hex hash segment.
+        let filename = "\(noteUUID.uuidString.lowercased())-\(hash).\(ext)"
         let dest = notesDir.appendingPathComponent(filename)
 
         if !FileManager.default.fileExists(atPath: dest.path) {
@@ -52,7 +53,7 @@ final class ImageStore {
         // Ensure trash dir exists.
         try fm.createDirectory(at: trashDir, withIntermediateDirectories: true)
 
-        let prefix = "\(noteUUID.uuidString)-"
+        let prefix = "\(noteUUID.uuidString.lowercased())-"
         let contents = try fm.contentsOfDirectory(
             at: notesDir,
             includingPropertiesForKeys: nil,
