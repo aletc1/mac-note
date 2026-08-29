@@ -9,12 +9,13 @@ struct MacNoteApp: App {
 
     @State private var appModel = AppModel()
     @State private var editorVMBox = EditorViewModelBox(EditorViewModel())
+    @State private var findSession = FindSession()
 
     // MARK: - Scene
 
     var body: some Scene {
         WindowGroup {
-            ContentView(appModel: appModel, editorVMBox: editorVMBox)
+            ContentView(appModel: appModel, editorVMBox: editorVMBox, findSession: findSession)
                 .onAppear {
                     appModel.startup()
                     // Wire storage dependencies into the editor view model
@@ -41,6 +42,8 @@ struct MacNoteApp: App {
         .commands {
             FormatMenuCommands(appModel: AppModelBox(appModel))
             DeleteNoteCommands(appModel: AppModelBox(appModel))
+            FindMenuCommands(findSession: FindSessionBox(findSession))
+            ViewMenuCommands()
         }
     }
 }
@@ -51,12 +54,13 @@ struct MacNoteApp: App {
 struct ContentView: View {
     var appModel: AppModel
     @ObservedObject var editorVMBox: EditorViewModelBox
+    var findSession: FindSession
 
     var body: some View {
         NavigationSplitView {
             SidebarView(appModel: appModel)
         } detail: {
-            DetailView(appModel: appModel, editorVMBox: editorVMBox)
+            DetailView(appModel: appModel, editorVMBox: editorVMBox, findSession: findSession)
         }
         .navigationSplitViewStyle(.balanced)
         .environment(appModel)
@@ -69,6 +73,7 @@ struct SidebarView: View {
     var appModel: AppModel
     @State private var showCategoryEditor = false
     @State private var pendingDeleteID: UUID?
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,6 +83,7 @@ struct SidebarView: View {
                     .foregroundStyle(.secondary)
                 TextField("Search", text: Bindable(appModel).searchText)
                     .textFieldStyle(.plain)
+                    .focused($searchFocused)
             }
             .padding(8)
             .background(Color(NSColor.controlBackgroundColor))
@@ -146,6 +152,9 @@ struct SidebarView: View {
         .onReceive(NotificationCenter.default.publisher(for: .requestDeleteNote)) { note in
             if let id = note.object as? UUID { pendingDeleteID = id }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .focusNoteSearch)) { _ in
+            searchFocused = true
+        }
     }
 }
 
@@ -169,6 +178,10 @@ struct DeleteNoteCommands: Commands {
 
 extension Notification.Name {
     static let requestDeleteNote = Notification.Name("MacNote.requestDeleteNote")
+    /// Focuses the toolbar's in-note find field (⌘F).
+    static let focusNoteFind = Notification.Name("MacNote.focusNoteFind")
+    /// Focuses the sidebar's cross-note title search field (⌥⌘F).
+    static let focusNoteSearch = Notification.Name("MacNote.focusNoteSearch")
 }
 
 // MARK: - DetailView
@@ -176,6 +189,10 @@ extension Notification.Name {
 struct DetailView: View {
     var appModel: AppModel
     @ObservedObject var editorVMBox: EditorViewModelBox
+    var findSession: FindSession
+
+    @FocusState private var findFieldFocused: Bool
+    @State private var showFontPopover = false
 
     var body: some View {
         Group {
@@ -184,6 +201,7 @@ struct DetailView: View {
                 EditorPane(
                     note: note,
                     viewModel: editorVMBox,
+                    findSession: findSession,
                     notesDirectory: appModel.noteStore.notesDirectory
                 )
                 .id(note.id)   // force view recreation on note switch
@@ -210,7 +228,107 @@ struct DetailView: View {
                 .help("Copy note")
                 .disabled(!appModel.canCopyCurrentNote)
             }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showFontPopover = true
+                } label: {
+                    Text("Aa")
+                }
+                .help("Font Size")
+                .popover(isPresented: $showFontPopover) {
+                    FontSizePopover()
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                NoteFindField(findSession: findSession, isFocused: $findFieldFocused)
+            }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .focusNoteFind)) { _ in
+            findFieldFocused = true
+        }
+    }
+}
+
+// MARK: - NoteFindField
+
+/// Rounded, Apple-Notes-style find field in the detail toolbar. Highlights are
+/// painted by `FindSession` directly onto the text view; this view only reads
+/// `findSession`'s state to drive the query field, match counter, and
+/// next/previous chevrons.
+private struct NoteFindField: View {
+    var findSession: FindSession
+    var isFocused: FocusState<Bool>.Binding
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Find in Note", text: Bindable(findSession).query)
+                .textFieldStyle(.plain)
+                .focused(isFocused)
+                .frame(minWidth: 90, maxWidth: 160)
+                .onExitCommand { findSession.clear() }
+            if let countText = findSession.matchCountText {
+                Text(countText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+            }
+            if !findSession.matches.isEmpty {
+                Button(action: findSession.previous) {
+                    Image(systemName: "chevron.up")
+                }
+                .buttonStyle(.borderless)
+                Button(action: findSession.next) {
+                    Image(systemName: "chevron.down")
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color(NSColor.controlBackgroundColor), in: Capsule())
+    }
+}
+
+// MARK: - FontSizePopover
+
+private struct FontSizePopover: View {
+    var body: some View {
+        @Bindable var settings = EditorSettings.shared
+        VStack(spacing: 12) {
+            Text("\(Int(settings.fontSize)) pt")
+                .font(.headline)
+            HStack {
+                Button {
+                    settings.zoomOut()
+                } label: {
+                    Image(systemName: "textformat.size.smaller")
+                }
+                .buttonStyle(.borderless)
+                Slider(
+                    value: Binding(
+                        get: { Double(settings.fontSize) },
+                        set: { settings.setFontSize(CGFloat($0)) }
+                    ),
+                    in: Double(EditorSettings.minSize)...Double(EditorSettings.maxSize),
+                    step: 1
+                )
+                .frame(width: 140)
+                Button {
+                    settings.zoomIn()
+                } label: {
+                    Image(systemName: "textformat.size.larger")
+                }
+                .buttonStyle(.borderless)
+            }
+            Button("Actual Size") {
+                settings.resetZoom()
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding()
+        .frame(width: 220)
     }
 }
 

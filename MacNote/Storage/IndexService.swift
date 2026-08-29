@@ -49,9 +49,11 @@ final class IndexService {
         try queue.sync {
             // Open (or create) the database file.
             let rc = sqlite3_open(dbURL.path, &db)
-            guard rc == SQLITE_OK, let db else {
+            guard rc == SQLITE_OK, let openedDB = db else {
                 throw IndexServiceError.openFailed(message: sqliteMessage(db))
             }
+
+            try migrateAwayFromContentlessFTSIfNeeded(openedDB)
 
             // Enable WAL mode for better concurrency.
             try exec("PRAGMA journal_mode=WAL;")
@@ -70,10 +72,13 @@ final class IndexService {
                 );
                 """)
 
-            // Full-text search virtual table (FTS5).
+            // Full-text search virtual table (FTS5). Deliberately not
+            // `content=''` (contentless) — a contentless table never stores
+            // even its UNINDEXED columns, so `id` always reads back NULL,
+            // silently breaking every join and every id-based DELETE.
             try exec("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts
-                USING fts5(id UNINDEXED, body, content='', tokenize='porter ascii');
+                USING fts5(id UNINDEXED, body, tokenize='porter ascii');
                 """)
 
             // Categories table.
@@ -87,6 +92,42 @@ final class IndexService {
 
             logger.debug("IndexService setup complete at \(self.dbURL.path)")
         }
+    }
+
+    /// A prior build created `notes_fts` as a contentless FTS5 table
+    /// (`content=''`), which can't retrieve or filter on `id` — MATCH worked,
+    /// but every join and every id-based DELETE silently no-opped, leaving
+    /// stale body text permanently matchable. There's no in-place way to
+    /// change an FTS5 table's `content` option, and the whole database is a
+    /// rebuildable mirror of the note files (see CLAUDE.md), so on detecting
+    /// the old schema this deletes the database file outright — the normal
+    /// reconcile-on-launch path (`AppModel.reconcileIndex`) repopulates it
+    /// from disk, since an empty `notes` table makes `needsReindex` return
+    /// `true` for every note.
+    private func migrateAwayFromContentlessFTSIfNeeded(_ openedDB: OpaquePointer) throws {
+        guard hasContentlessNotesFTSTable(openedDB) else { return }
+
+        sqlite3_close(openedDB)
+        db = nil
+        let path = dbURL.path
+        for suffix in ["", "-wal", "-shm"] {
+            try? FileManager.default.removeItem(atPath: path + suffix)
+        }
+
+        let rc = sqlite3_open(dbURL.path, &db)
+        guard rc == SQLITE_OK, db != nil else {
+            throw IndexServiceError.openFailed(message: sqliteMessage(db))
+        }
+        logger.notice("Rebuilt index.sqlite to migrate off the contentless FTS5 schema")
+    }
+
+    private func hasContentlessNotesFTSTable(_ db: OpaquePointer) -> Bool {
+        let sql = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notes_fts';"
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        guard sqlite3_step(stmt) == SQLITE_ROW, let cSql = sqlite3_column_text(stmt, 0) else { return false }
+        return String(cString: cSql).contains("content=''")
     }
 
     // MARK: - Insert

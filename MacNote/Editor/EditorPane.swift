@@ -12,12 +12,13 @@ struct EditorPane: NSViewRepresentable {
 
     let note: NoteItem?
     @ObservedObject var viewModel: EditorViewModelBox
+    var findSession: FindSession
     var notesDirectory: URL = NoteStore.defaultNotesDirectory
 
     // MARK: - NSViewRepresentable
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(viewModel: viewModel.vm)
+        Coordinator(viewModel: viewModel.vm, findSession: findSession)
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -25,6 +26,12 @@ struct EditorPane: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        // Bottom breathing room past the last line: without it the caret sits
+        // right at the container edge and every new line at the end of a long
+        // note forces a visible scroll jump. `textContainerInset` can't do this
+        // alone — it's a symmetric NSSize, so raising it also pads the top.
+        scrollView.automaticallyAdjustsContentInsets = false
+        scrollView.contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: 240, right: 0)
 
         let textView = MacNoteTextView()
         textView.commonSetup()
@@ -34,6 +41,12 @@ struct EditorPane: NSViewRepresentable {
         textView.notesDirectory = notesDirectory
 
         context.coordinator.textView = textView
+        // `.id(note.id)` on DetailView forces this whole representable to be
+        // rebuilt on every note switch, so this runs once per open note —
+        // reset any highlights left over from the previous note before
+        // pointing findSession at the new text view.
+        findSession.clear()
+        findSession.textView = textView
 
         let contentSize = scrollView.contentSize
         textView.minSize = NSSize(width: 0, height: contentSize.height)
@@ -81,12 +94,14 @@ struct EditorPane: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
 
         let vm: EditorViewModel
+        let findSession: FindSession
         weak var textView: MacNoteTextView?
         var loadedNoteID: UUID?
         var loadedLanguage: NoteLanguage?
 
-        init(viewModel: EditorViewModel) {
+        init(viewModel: EditorViewModel, findSession: FindSession) {
             self.vm = viewModel
+            self.findSession = findSession
         }
 
         // MARK: NSTextViewDelegate
@@ -98,6 +113,7 @@ struct EditorPane: NSViewRepresentable {
             let range = NSRange(location: 0, length: (content as NSString).length)
             vm.markDirty(in: range, with: content)
             (tv as? MacNoteTextView)?.highlighterController?.invalidateAll()
+            findSession.noteContentDidChange()
         }
 
         func textView(
@@ -114,7 +130,7 @@ struct EditorPane: NSViewRepresentable {
         // Reset typing attributes after cursor moves so the monospaced font is always active.
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let tv = notification.object as? MacNoteTextView else { return }
-            tv.typingAttributes = [.font: NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)]
+            tv.typingAttributes = EditorSettings.shared.defaultAttrs
         }
     }
 }

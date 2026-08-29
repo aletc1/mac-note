@@ -36,16 +36,23 @@ final class HighlighterController {
 
     // MARK: - Private
 
-    private static let monoRegular = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-    private static let monoBold    = NSFont.monospacedSystemFont(ofSize: 14, weight: .bold)
+    /// Computed, not `let` — must track `EditorSettings.shared.fontSize` as it
+    /// changes, not freeze at the value read on first access.
+    private static var monoRegular: NSFont { EditorSettings.shared.regularFont }
 
     private struct Rule {
         let regex: NSRegularExpression
         let attrs: [NSAttributedString.Key: Any]
-        init(_ pattern: String, _ options: NSRegularExpression.Options = [], _ attrs: [NSAttributedString.Key: Any]) {
+        /// Headings/bold need the *current* bold font, not the one baked into
+        /// `attrs` when these rule tables were built — so the bold weight is
+        /// applied separately, at match time, reading `EditorSettings.shared`.
+        let usesBoldFont: Bool
+        init(_ pattern: String, _ options: NSRegularExpression.Options = [],
+             _ attrs: [NSAttributedString.Key: Any], usesBoldFont: Bool = false) {
             // Patterns are compile-time constants; crash on bad pattern is intentional.
             self.regex = try! NSRegularExpression(pattern: pattern, options: options)
             self.attrs = attrs
+            self.usesBoldFont = usesBoldFont
         }
     }
 
@@ -53,8 +60,7 @@ final class HighlighterController {
     private static let markdownRules: [Rule] = [
         // ATX headings: # H1 … ###### H6
         Rule("^#{1,6}[ \\t].+$", [.anchorsMatchLines],
-             [.foregroundColor: NSColor.systemBlue,
-              .font: NSFont.monospacedSystemFont(ofSize: 14, weight: .bold)]),
+             [.foregroundColor: NSColor.systemBlue], usesBoldFont: true),
         // Blockquotes: > text
         Rule("^>[ \\t]?.*$", [.anchorsMatchLines],
              [.foregroundColor: NSColor.secondaryLabelColor]),
@@ -62,8 +68,7 @@ final class HighlighterController {
         Rule("(`{3,}|~{3,})[^\\n]*\\n[\\s\\S]*?\\1", [],
              [.foregroundColor: NSColor.secondaryLabelColor]),
         // Bold: **text** or __text__
-        Rule("(\\*{2}|_{2}).+?\\1", [],
-             [.font: NSFont.monospacedSystemFont(ofSize: 14, weight: .bold)]),
+        Rule("(\\*{2}|_{2}).+?\\1", [], [:], usesBoldFont: true),
         // Inline code: `code`
         Rule("`[^`\\n]+`", [],
              [.foregroundColor: NSColor.systemGreen]),
@@ -259,6 +264,9 @@ final class HighlighterController {
                 guard let r = match?.range, r.length > 0 else { return }
                 for (key, value) in rule.attrs {
                     storage.addAttribute(key, value: value, range: r)
+                }
+                if rule.usesBoldFont {
+                    storage.addAttribute(.font, value: EditorSettings.shared.boldFont, range: r)
                 }
             }
         }

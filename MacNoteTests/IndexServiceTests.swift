@@ -1,4 +1,5 @@
 import XCTest
+import SQLite3
 @testable import MacNote
 
 final class IndexServiceTests: XCTestCase {
@@ -98,5 +99,66 @@ final class IndexServiceTests: XCTestCase {
         try service.insert(note: newer, body: "new")
         let fetched = try service.fetchAll()
         XCTAssertEqual(fetched.first?.title, "Newer")
+    }
+
+    func testUpdateRemovesStaleBodyFromSearch() throws {
+        let id = UUID()
+        let note = NoteItem(id: id, title: "Groceries", language: .markdown,
+                            categoryID: nil, createdAt: Date(), modifiedAt: Date(),
+                            path: tmpDir.appendingPathComponent("g.md"))
+        try service.insert(note: note, body: "milk eggs butter")
+        try service.update(note: note, body: "bread jam")
+
+        XCTAssertTrue(try service.search(query: "eggs").isEmpty)
+        XCTAssertEqual(try service.search(query: "jam").count, 1)
+    }
+
+    func testDeleteRemovesNoteFromSearchIndex() throws {
+        let id = UUID()
+        let note = NoteItem(id: id, title: "Temp", language: .plain,
+                            categoryID: nil, createdAt: Date(), modifiedAt: Date(),
+                            path: tmpDir.appendingPathComponent("t.txt"))
+        try service.insert(note: note, body: "unique searchable term")
+        try service.delete(noteID: id)
+        XCTAssertTrue(try service.search(query: "searchable").isEmpty)
+    }
+
+    /// A prior build created `notes_fts` as a contentless FTS5 table
+    /// (`content=''`), which silently broke every id-based join and delete.
+    /// `setup()` must detect that on-disk schema and rebuild the database
+    /// rather than leaving it broken behind `CREATE ... IF NOT EXISTS`.
+    func testMigratesAwayFromContentlessFTSSchema() throws {
+        // A dedicated subdirectory — `tmpDir`'s own index.sqlite already
+        // exists (created with the fixed schema by setUpWithError) by the
+        // time this test runs.
+        let migrationDir = tmpDir.appendingPathComponent("migration-test")
+        try FileManager.default.createDirectory(at: migrationDir, withIntermediateDirectories: true)
+
+        // Recreate the exact broken schema a previous version of the app
+        // would have left on disk, then hand it to a fresh IndexService.
+        let brokenDBURL = migrationDir.appendingPathComponent("index.sqlite")
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(brokenDBURL.path, &db), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, """
+            CREATE TABLE notes (
+                id TEXT PRIMARY KEY NOT NULL, title TEXT NOT NULL DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'md', category_id TEXT,
+                created_at REAL NOT NULL, modified_at REAL NOT NULL, path TEXT NOT NULL
+            );
+            """, nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, """
+            CREATE VIRTUAL TABLE notes_fts
+            USING fts5(id UNINDEXED, body, content='', tokenize='porter ascii');
+            """, nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+
+        let migratedService = IndexService(supportDirectory: migrationDir)
+        try migratedService.setup()
+
+        let note = NoteItem(id: UUID(), title: "Post-migration", language: .markdown,
+                            categoryID: nil, createdAt: Date(), modifiedAt: Date(),
+                            path: migrationDir.appendingPathComponent("pm.md"))
+        try migratedService.insert(note: note, body: "searchable after migration")
+        XCTAssertEqual(try migratedService.search(query: "searchable").count, 1)
     }
 }
