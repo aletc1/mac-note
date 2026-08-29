@@ -97,14 +97,20 @@ final class MacNoteTextView: NSTextView {
         try! NSRegularExpression(pattern: #"!\[([^\]]*)\]\(([^)]*)\)"#)
     }()
 
-    private static let monoFont = NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-    private static let defaultAttrs: [NSAttributedString.Key: Any] = [.font: monoFont]
+    /// Computed, not `let` — must track `EditorSettings.shared.fontSize` as it
+    /// changes, not freeze at the value read on first access.
+    private static var monoFont: NSFont { EditorSettings.shared.regularFont }
+    private static var defaultAttrs: [NSAttributedString.Key: Any] { EditorSettings.shared.defaultAttrs }
 
     // MARK: - Setup
 
     override func awakeFromNib() {
         super.awakeFromNib()
         commonSetup()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func commonSetup() {
@@ -117,6 +123,36 @@ final class MacNoteTextView: NSTextView {
         font = Self.monoFont
         typingAttributes = Self.defaultAttrs
         textContainerInset = NSSize(width: 16, height: 16)
+
+        // Deterministically pin TextKit 1 compatibility mode. `NSTextView()`
+        // starts as a TextKit 2 view (non-nil `textLayoutManager`) on macOS 14
+        // SDKs; touching `.layoutManager` migrates it to TextKit 1. Several
+        // call sites already rely on TextKit 1 — `imageAttachment(at:)`,
+        // `refreshAttachmentLayout()`, and `FindSession`'s use of
+        // `addTemporaryAttribute`, which has no TextKit 2 equivalent. Doing
+        // this here, rather than relying on an incidental first right-click,
+        // avoids a TextKit-generation switch happening mid-session.
+        _ = layoutManager
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleFontSizeChanged),
+            name: .editorFontSizeChanged, object: nil)
+    }
+
+    @objc private func handleFontSizeChanged() {
+        applyFontSize()
+    }
+
+    /// Re-applies the current `EditorSettings` size to the whole document.
+    /// Setting `font`/`typingAttributes` alone would only affect newly typed
+    /// text — `highlighterController.invalidateAll()` re-stamps the existing
+    /// storage (`HighlighterController.swift:240`) and `refreshAttachmentLayout()`
+    /// re-lays-out `ImageAttachment`s, whose bounds depend on line-fragment width.
+    func applyFontSize() {
+        font = Self.monoFont
+        typingAttributes = Self.defaultAttrs
+        highlighterController?.invalidateAll()
+        refreshAttachmentLayout()
     }
 
     // MARK: - Markdown load / extract
